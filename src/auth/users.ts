@@ -8,6 +8,10 @@ import { hashPassword } from "./passwords.ts";
 
 type UserRole = "customer" | "support" | "admin";
 
+declare const CanonicalEmailBrand: unique symbol;
+
+export type CanonicalEmail = string & { readonly [CanonicalEmailBrand]: true };
+
 export type User = {
   id: number;
   email: string;
@@ -20,8 +24,8 @@ export type User = {
   updated_at: string;
 };
 
-export function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
+export function normalizeEmail(email: string): CanonicalEmail {
+  return email.trim().toLowerCase() as CanonicalEmail;
 }
 
 export async function createUser(
