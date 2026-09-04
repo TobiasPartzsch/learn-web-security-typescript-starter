@@ -27,12 +27,12 @@ import {
   updateReview,
   type Review,
 } from "../reviews.ts";
+import type { Keyring } from "../storage/keyring.ts";
 import {
   createUploadedFile,
   listUploadedFilesForUser,
 } from "../uploads/index.ts";
 import { createUploadMiddleware } from "../uploads/middleware.ts";
-import type { Keyring } from "../storage/keyring.ts";
 import { storeTaxDocument } from "../uploads/taxDocuments.ts";
 import {
   renderAccountPage,
@@ -52,6 +52,11 @@ export function createAccountRouter(deps: Dependencies): Router {
   router.get("/account", (req, res) => {
     const current = requireAuth(db, req, res);
     if (!current) return;
+    logEvent("account_accessed", {
+      userId: current.user.id,
+      email: current.user.email,
+      expiresAt: current.session.expires_at,
+    });
     res.type("html").send(renderAccountPage(current));
   });
 
