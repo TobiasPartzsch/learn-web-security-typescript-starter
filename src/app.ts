@@ -1,5 +1,5 @@
-import { randomBytes } from "node:crypto";
 import express, { type RequestHandler } from "express";
+import { randomBytes } from "node:crypto";
 import { validateRequestOrigin } from "./csrf.ts";
 import type { Dependencies } from "./dependencies.ts";
 import { errorHandler, sendErrorPage } from "./errors.ts";
@@ -9,12 +9,12 @@ import { createApiRouter } from "./routes/api.ts";
 import { createArchiveRouter } from "./routes/archive.ts";
 import { createAssistantRouter } from "./routes/assistant.ts";
 import { createAuthRouter } from "./routes/auth.ts";
-import { createPasskeyRouter } from "./routes/passkey.ts";
 import { createCartRouter } from "./routes/cart.ts";
 import { createCheckoutRouter } from "./routes/checkout.ts";
 import { createFilesRouter } from "./routes/files.ts";
 import { createImagePreviewRouter } from "./routes/imagePreview.ts";
 import { createOrdersRouter } from "./routes/orders.ts";
+import { createPasskeyRouter } from "./routes/passkey.ts";
 import { createPawPalRouter } from "./routes/pawpal.ts";
 import { createProductsRouter } from "./routes/products.ts";
 import { createStorefrontRouter } from "./routes/storefront.ts";
@@ -51,6 +51,7 @@ export function createApp(deps: Dependencies): express.Express {
   app.use((_req, res, next) => {
     const cspNonce = randomBytes(16).toString("base64");
     res.locals.cspNonce = cspNonce;
+    res.set("X-Content-Type-Options", "nosniff")
     next();
   });
 
