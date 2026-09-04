@@ -1,21 +1,25 @@
 import { Router, type Request, type Response } from "express";
-import type { Dependencies } from "../dependencies.ts";
 import { safeReturnTo } from "../auth/accessControl.ts";
+import {
+  createPasswordResetToken,
+  findPasswordResetToken,
+} from "../auth/passwordResetTokens.ts";
 import {
   hashPassword,
   MAX_PASSWORD_LENGTH,
   verifyPassword,
 } from "../auth/passwords.ts";
 import {
-  createPasswordResetToken,
-  findPasswordResetToken,
-} from "../auth/passwordResetTokens.ts";
-import {
   clearSessionCookie,
   setSessionCookie,
 } from "../auth/sessionCookies.ts";
-import { createSession, getCurrentSession } from "../auth/sessions.ts";
+import { createSession, getCurrentSession, revokeSession } from "../auth/sessions.ts";
 import { verifyAndConsumeTotpCode } from "../auth/totp.ts";
+import {
+  countRecentRecoveryAttempts,
+  recordRecoveryAttempt,
+  verifyAndConsumeBackupCode,
+} from "../auth/totpBackupCodes.ts";
 import {
   abandonTotpLoginChallenge,
   clearTotpLoginChallengeCookie,
@@ -27,11 +31,6 @@ import {
   setTotpLoginChallengeCookie,
 } from "../auth/totpLoginChallenges.ts";
 import {
-  countRecentRecoveryAttempts,
-  recordRecoveryAttempt,
-  verifyAndConsumeBackupCode,
-} from "../auth/totpBackupCodes.ts";
-import {
   clearTotpSecret,
   createUser,
   findUserByEmail,
@@ -40,6 +39,8 @@ import {
   normalizeEmail,
   updateUserPassword,
 } from "../auth/users.ts";
+import type { Dependencies } from "../dependencies.ts";
+import { logEvent } from "../logger.ts";
 import {
   renderLoginPage,
   renderMfaRecoveryPage,
@@ -51,7 +52,6 @@ import {
   renderSignupPage,
   renderTotpLoginPage as renderTotpLoginView,
 } from "../views/auth.ts";
-import { logEvent } from "../logger.ts";
 
 type AuthenticationLogFields = {
   success: boolean;
@@ -379,6 +379,11 @@ export function createAuthRouter(deps: Dependencies): Router {
   });
 
   router.post("/logout", (req, res) => {
+    const current = getCurrentSession(db, req.header("cookie"));
+    if (current) {
+      revokeSession(db, current.session.token);
+    }
+
     const challengeToken = getTotpLoginChallengeToken(req.header("cookie"));
     abandonTotpLoginChallenge(db, req.header("cookie"));
     clearSessionCookie(res);
