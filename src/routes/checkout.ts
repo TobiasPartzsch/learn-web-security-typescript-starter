@@ -1,4 +1,3 @@
-import type { Dependencies } from "../dependencies.ts";
 import { Router, type Response } from "express";
 import { requireAuth } from "../auth/accessControl.ts";
 import {
@@ -6,11 +5,8 @@ import {
   listCartItems,
   type CartItem,
 } from "../cart.ts";
+import type { Dependencies } from "../dependencies.ts";
 import { sendErrorPage } from "../errors.ts";
-import {
-  renderCheckoutPage,
-  renderPawPalProcessingPage,
-} from "../views/checkout.ts";
 import { reserveAcornFulfillment } from "../integrations/acornFulfillment.ts";
 import {
   createPawPalCheckoutUrl,
@@ -22,6 +18,10 @@ import {
   findOrderById,
   InsufficientInventoryError,
 } from "../orders/index.ts";
+import {
+  renderCheckoutPage,
+  renderPawPalProcessingPage,
+} from "../views/checkout.ts";
 
 export function sendFulfillmentTimeout(
   response: Response,
@@ -108,7 +108,6 @@ export function createCheckoutRouter(deps: Dependencies): Router {
     const shippingCity = String(req.body.shippingCity ?? "").trim();
     const shippingRegion = String(req.body.shippingRegion ?? "").trim();
     const shippingPostalCode = String(req.body.shippingPostalCode ?? "").trim();
-    const discountCents = Number(req.body.discountCents ?? 0);
 
     if (
       !shippingName ||
@@ -171,7 +170,6 @@ export function createCheckoutRouter(deps: Dependencies): Router {
         db,
         current.user.id,
         items,
-        discountCents,
         shippingDetails,
         adminNotes,
         deps.keyring,

@@ -1,5 +1,5 @@
-import { getCartTotalCents, type CartItem } from "../cart.ts";
 import type { DatabaseSync } from "node:sqlite";
+import { getCartTotalCents, type CartItem } from "../cart.ts";
 import type { Keyring } from "../storage/keyring.ts";
 import { encryptShippingDetails, type ShippingDetails } from "./shipping.ts";
 
@@ -39,12 +39,11 @@ export function createOrderFromCart(
   db: DatabaseSync,
   userId: number,
   items: CartItem[],
-  discountCents: number,
   shippingDetails: ShippingDetails,
   adminNotes: string,
   keyring: Keyring | undefined,
 ): Order {
-  const totalCents = getCartTotalCents(items) - discountCents;
+  const totalCents = getCartTotalCents(items);
   const encryptedShippingDetails = encryptShippingDetails(
     shippingDetails,
     keyring,
