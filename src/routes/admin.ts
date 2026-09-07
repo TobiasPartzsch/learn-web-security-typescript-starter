@@ -1,14 +1,8 @@
 import { Router, type Request, type Response } from "express";
 import type { DatabaseSync } from "node:sqlite";
-import type { Dependencies } from "../dependencies.ts";
 import { getCurrentSession, type CurrentSession } from "../auth/sessions.ts";
+import type { Dependencies } from "../dependencies.ts";
 import { sendErrorPage } from "../errors.ts";
-import {
-  renderAdminDashboard,
-  renderAdminProductPage,
-  renderAdminProductsPage,
-  renderProductFormPage,
-} from "../views/admin.ts";
 import {
   createProduct,
   findAnyProductById,
@@ -17,6 +11,12 @@ import {
   type Product,
   type ProductInput,
 } from "../products.ts";
+import {
+  renderAdminDashboard,
+  renderAdminProductPage,
+  renderAdminProductsPage,
+  renderProductFormPage,
+} from "../views/admin.ts";
 
 export function createAdminRouter(deps: Dependencies): Router {
   const { db } = deps;
@@ -100,7 +100,7 @@ export function createAdminRouter(deps: Dependencies): Router {
   });
 
   router.get("/admin/products/:id/edit", (req, res) => {
-    const current = requireRole(db, req, res, "support", "admin");
+    const current = requireRole(db, req, res, "admin");
     if (!current) {
       return;
     }
@@ -125,7 +125,7 @@ export function createAdminRouter(deps: Dependencies): Router {
   });
 
   router.post("/admin/products/:id", (req, res) => {
-    const current = requireRole(db, req, res, "support", "admin");
+    const current = requireRole(db, req, res, "admin");
     if (!current) {
       return;
     }
