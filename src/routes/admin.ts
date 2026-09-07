@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import type { DatabaseSync } from "node:sqlite";
-import { getCurrentSession, type CurrentSession } from "../auth/sessions.ts";
+import { requireRole } from "../auth/accessControl.ts";
 import type { Dependencies } from "../dependencies.ts";
 import { sendErrorPage } from "../errors.ts";
 import {
@@ -175,28 +175,6 @@ export function createAdminRouter(deps: Dependencies): Router {
   });
 
   return router;
-}
-
-function requireRole(
-  db: DatabaseSync,
-  req: Request,
-  res: Response,
-  ...allowedRoles: CurrentSession["user"]["role"][]
-): CurrentSession | undefined {
-  const current = getCurrentSession(db, req.header("cookie"));
-  if (!current) {
-    res.redirect("/login");
-    return undefined;
-  }
-  const staffRoles = ["support", "admin"];
-  if (
-    staffRoles.includes(current.user.role) &&
-    !allowedRoles.includes(current.user.role)
-  ) {
-    res.status(403).send("Forbidden");
-    return undefined;
-  }
-  return current;
 }
 
 function requireProduct(
