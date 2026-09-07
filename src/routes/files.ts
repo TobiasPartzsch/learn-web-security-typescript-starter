@@ -1,14 +1,14 @@
 import { Router } from "express";
+import { hasRole, requireAuth, requireRole } from "../auth/accessControl.ts";
 import type { Dependencies } from "../dependencies.ts";
-import { readTaxDocument } from "../uploads/taxDocuments.ts";
-import { requireAuth, requireRole } from "../auth/accessControl.ts";
 import { sendErrorPage } from "../errors.ts";
-import { findUploadedFileById } from "../uploads/index.ts";
 import { findImportedTaxDocumentById } from "../uploads/importedTaxDocuments.ts";
+import { findUploadedFileById } from "../uploads/index.ts";
 import {
   createSignedDownloadPath,
   verifySignedDownload,
 } from "../uploads/signedDownloads.ts";
+import { readTaxDocument } from "../uploads/taxDocuments.ts";
 
 export function createFilesRouter(deps: Dependencies): Router {
   const { db } = deps;
@@ -27,7 +27,8 @@ export function createFilesRouter(deps: Dependencies): Router {
     }
 
     const file = findUploadedFileById(db, fileId);
-    if (!file) {
+    if (!file ||
+      (file.user_id != current.user.id && !hasRole(current, "support", "admin"))) {
       sendErrorPage(res, 404, "File Not Found", "We couldn't find that file.");
       return;
     }
