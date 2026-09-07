@@ -1,19 +1,11 @@
-import { Router } from "express";
-import type { Dependencies } from "../dependencies.ts";
 import { isoBase64URL } from "@simplewebauthn/server/helpers";
+import { Router } from "express";
 import {
   hasRecentAuthentication,
   requireAuth,
   requireRecentAuth,
   safeReturnTo,
 } from "../auth/accessControl.ts";
-import { setSessionCookie } from "../auth/sessionCookies.ts";
-import { createSession, getCurrentSession } from "../auth/sessions.ts";
-import {
-  abandonTotpLoginChallenge,
-  clearTotpLoginChallengeCookie,
-  getTotpLoginChallengeToken,
-} from "../auth/totpLoginChallenges.ts";
 import {
   consumeChallenge,
   createChallenge,
@@ -25,15 +17,24 @@ import {
   rpName,
   storePasskeyCredential,
   updatePasskeyCounter,
+  verifyAuthenticationResponse,
   verifyRegistrationResponse,
 } from "../auth/passkeys.ts";
+import { setSessionCookie } from "../auth/sessionCookies.ts";
+import { createSession, getCurrentSession } from "../auth/sessions.ts";
+import {
+  abandonTotpLoginChallenge,
+  clearTotpLoginChallengeCookie,
+  getTotpLoginChallengeToken,
+} from "../auth/totpLoginChallenges.ts";
 import { findUserById } from "../auth/users.ts";
+import type { Dependencies } from "../dependencies.ts";
+import { sendErrorPage } from "../errors.ts";
+import { logEvent } from "../logger.ts";
 import {
   renderPasskeyLoginPage,
   renderPasskeyManagePage,
 } from "../views/passkey.ts";
-import { sendErrorPage } from "../errors.ts";
-import { logEvent } from "../logger.ts";
 
 type AuthenticationResponseVerifier =
   typeof import("../auth/passkeys.ts").verifyAuthenticationResponse;
@@ -109,22 +110,24 @@ export function createPasskeyRouter(deps: Dependencies): Router {
         counter: credential.counter,
         ...(credential.transports
           ? {
-              transports: JSON.parse(
-                credential.transports,
-              ) as AuthenticatorTransport[],
-            }
+            transports: JSON.parse(
+              credential.transports,
+            ) as AuthenticatorTransport[],
+          }
           : {}),
       },
     };
 
     let verification;
     try {
-      verification = {
-        verified: false,
-        authenticationInfo: {
-          newCounter: passkeyVerificationInput.credential.counter,
-        },
-      };
+      verification = await verifyAuthenticationResponse({
+        response: passkeyVerificationInput.response,
+        expectedChallenge: stored.challenge,
+        expectedOrigin: rpOrigin,
+        expectedRPID: rpID,
+        requireUserVerification: true,
+        credential: passkeyVerificationInput.credential,
+      });
     } catch (error) {
       logEvent("passkey_login_failed", { credentialId, error: String(error) });
       res
