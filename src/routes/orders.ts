@@ -1,6 +1,6 @@
 import { Router } from "express";
-import type { Dependencies } from "../dependencies.ts";
 import { requireAuth } from "../auth/accessControl.ts";
+import type { Dependencies } from "../dependencies.ts";
 import { sendErrorPage } from "../errors.ts";
 import {
   findOrderById,
@@ -42,7 +42,7 @@ export function createOrdersRouter(deps: Dependencies): Router {
     }
 
     const order = findOrderById(db, orderId);
-    if (!order) {
+    if (!order || order.user_id !== current.user.id) {
       sendErrorPage(
         res,
         404,
