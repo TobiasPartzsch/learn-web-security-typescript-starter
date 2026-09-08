@@ -164,11 +164,11 @@ export function searchProducts(db: DatabaseSync, query: string): Product[] {
     SELECT id, name, description, image_path, price_cents, cost_cents, inventory_count, is_active, created_at
     FROM products
     WHERE is_active = 1
-      AND (name LIKE ? OR description LIKE ?)
+      AND (name LIKE $pattern OR description LIKE $pattern)
     ORDER BY name
   `;
 
-  return db.prepare(sql).all(pattern, pattern) as Product[];
+  return db.prepare(sql).all({ pattern }) as Product[];
 }
 
 export function searchPublicProducts(
@@ -181,10 +181,10 @@ export function searchPublicProducts(
     SELECT id, name, description, image_path, price_cents, cost_cents, inventory_count, is_active, created_at
     FROM products
     WHERE is_active = 1
-      AND (name LIKE ? OR description LIKE ?)
+      AND (name LIKE $pattern OR description LIKE $pattern)
     ORDER BY name
-    LIMIT ?
+    LIMIT $maxResults
   `;
 
-  return db.prepare(sql).all(pattern, pattern, maxResults) as Product[];
+  return db.prepare(sql).all({ pattern, maxResults }) as Product[];
 }
