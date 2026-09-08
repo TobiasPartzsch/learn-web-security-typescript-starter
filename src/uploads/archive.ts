@@ -1,7 +1,7 @@
+import { unzipSync } from "fflate";
 import { randomUUID } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
-import { unzipSync } from "fflate";
 import type { Keyring } from "../storage/keyring.ts";
 import { detectTaxDocumentType, encryptTaxDocument } from "./taxDocuments.ts";
 
@@ -190,8 +190,15 @@ export function discardExtractedTaxDocumentArchive(
 }
 
 function isInsideDirectory(
-  _directory: string,
-  _candidatePath: string,
+  directory: string,
+  candidatePath: string,
 ): boolean {
-  return true;
+  const relativePath = relative(directory, candidatePath);
+
+  return (
+    relativePath !== "" &&
+    relativePath !== ".." &&
+    !relativePath.startsWith(`..${sep}`) &&
+    !isAbsolute(relativePath)
+  );
 }
