@@ -1,14 +1,14 @@
 import { Router } from "express";
-import type { Dependencies } from "../dependencies.ts";
+import { requireAuth } from "../auth/accessControl.ts";
 import {
   addProductToCart,
   getCartTotalCents,
   listCartItems,
   MAX_CART_QUANTITY,
-  updateCartItemQuantity,
+  updateCartItemQuantity
 } from "../cart.ts";
-import { requireAuth } from "../auth/accessControl.ts";
 import { csrfTokensMatch } from "../csrf.ts";
+import type { Dependencies } from "../dependencies.ts";
 import { sendErrorPage } from "../errors.ts";
 import { findProductById } from "../products.ts";
 import { renderCartPage } from "../views/cart.ts";
@@ -135,10 +135,12 @@ export function createCartRouter(deps: Dependencies): Router {
 }
 
 function parseCartQuantity(value: unknown, minimum: 0 | 1): number | undefined {
+  if (typeof value !== "string" || !/^(0|[1-9]\d?)$/.test(value)) {
+    return undefined;
+  }
+
   const quantity = Number(value);
-  return Number.isSafeInteger(quantity) &&
-    quantity >= minimum &&
-    quantity <= MAX_CART_QUANTITY
+  return quantity >= minimum && quantity <= MAX_CART_QUANTITY
     ? quantity
     : undefined;
 }
