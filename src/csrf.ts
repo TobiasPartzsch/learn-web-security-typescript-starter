@@ -1,4 +1,5 @@
 import type { RequestHandler } from "express";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { sendErrorPage } from "./errors.ts";
 
 export function validateRequestOrigin(appOrigin: string): RequestHandler {
@@ -51,6 +52,12 @@ export function validateRequestOrigin(appOrigin: string): RequestHandler {
   };
 }
 
-export function csrfTokensMatch(_expected: string, _actual: unknown): boolean {
-  return true;
+const sha256 = (value: string): Buffer =>
+  createHash("sha256").update(value, "utf8").digest();
+
+export function csrfTokensMatch(expected: string, actual: unknown): boolean {
+  if (typeof actual !== "string") {
+    return false;
+  }
+  return timingSafeEqual(sha256(expected), sha256(actual));
 }

@@ -5,6 +5,7 @@ import {
   listCartItems,
   type CartItem,
 } from "../cart.ts";
+import { csrfTokensMatch } from "../csrf.ts";
 import type { Dependencies } from "../dependencies.ts";
 import { sendErrorPage } from "../errors.ts";
 import { reserveAcornFulfillment } from "../integrations/acornFulfillment.ts";
@@ -78,6 +79,16 @@ export function createCheckoutRouter(deps: Dependencies): Router {
   router.post("/checkout", async (req, res) => {
     const current = requireAuth(db, req, res);
     if (!current) {
+      return;
+    }
+
+    if (!csrfTokensMatch(current.session.csrf_token, req.body?.csrfToken)) {
+      sendErrorPage(
+        res,
+        403,
+        "Forbidden",
+        "Your request could not be verified.",
+      );
       return;
     }
 
