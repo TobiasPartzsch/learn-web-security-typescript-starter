@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { type Request, type Response, Router } from "express";
 import { findApiKey } from "../auth/apiKeys.ts";
 import { getCurrentSession } from "../auth/sessions.ts";
 import type { Dependencies } from "../dependencies.ts";
@@ -7,24 +7,66 @@ import {
   listAllOrders,
   listOrderItems,
   listOrdersForUser,
+  type Order,
+  type OrderItem,
 } from "../orders/index.ts";
-import { listAllProducts } from "../products.ts";
+import { listProducts, type Product } from "../products.ts";
+
+type ProductResponse = {
+  id: number;
+  name: string;
+  description: string;
+  image_path: string;
+  price_cents: number;
+};
+
+type OrderResponse = {
+  id: number;
+  status: Order["status"];
+  total_cents: number;
+  created_at: string;
+};
+
+type OrderItemResponse = {
+  product_id: number;
+  product_name: string;
+  quantity: number;
+  price_cents: number;
+};
+
+type WarehouseOrdersResponse = {
+  integration: string;
+  orders: OrderResponse[];
+};
+
+type ProductsListResponse = { products: ProductResponse[] };
+type OrderListResponse = { orders: OrderResponse[] };
+
+type OrderDetailResponse = {
+  order: OrderResponse;
+  items: OrderItemResponse[];
+};
+
+type ApiError = { error: string };
+type ApiResponse<T> = T | ApiError;
+
 
 export function createApiRouter(deps: Dependencies): Router {
   const { db } = deps;
   const router = Router();
 
-  router.get("/api/account/orders", (req, res) => {
+  router.get("/api/account/orders", (req: Request, res: Response<ApiResponse<OrderListResponse>>) => {
     const current = getCurrentSession(db, req.header("cookie"));
     if (!current) {
       res.status(401).json({ error: "Authentication required" });
       return;
     }
 
-    res.json({ orders: listOrdersForUser(db, current.user.id) });
+    const orders = listOrdersForUser(db, current.user.id)
+    res.json({ orders: orders.map(toOrderResponse) });
   });
 
-  router.get("/api/orders/:id", (req, res) => {
+  router.get("/api/orders/:id", (req: Request, res: Response<ApiResponse<OrderDetailResponse>>) => {
     const current = getCurrentSession(db, req.header("cookie"));
     if (!current) {
       res.status(401).json({ error: "Authentication required" });
@@ -43,14 +85,14 @@ export function createApiRouter(deps: Dependencies): Router {
       return;
     }
 
-    res.json({ order, items: listOrderItems(db, order.id) });
+    res.json({ order: toOrderResponse(order), items: listOrderItems(db, order.id).map(toOrderItemResponse) });
   });
 
-  router.get("/api/products", (_req, res) => {
-    res.json({ products: listAllProducts(db) });
+  router.get("/api/products", (_req: Request, res: Response<ApiResponse<ProductsListResponse>>) => {
+    res.json({ products: listProducts(db).map(toProductResponse) });
   });
 
-  router.get("/api/integrations/warehouse/orders", (req, res) => {
+  router.get("/api/integrations/warehouse/orders", (req: Request, res: Response<ApiResponse<WarehouseOrdersResponse>>) => {
     const apiKey = findApiKey(db, req.header("x-api-key") ?? "");
     if (!apiKey) {
       res.status(401).json({ error: "Invalid API key" });
@@ -62,12 +104,7 @@ export function createApiRouter(deps: Dependencies): Router {
       return;
     }
 
-    const orders = listAllOrders(db).map((order) => ({
-      id: order.id,
-      status: order.status,
-      total_cents: order.total_cents,
-      created_at: order.created_at,
-    }));
+    const orders = listAllOrders(db).map(toOrderResponse);
 
     res.json({
       integration: "Warehouse Fulfillment Integration",
@@ -76,4 +113,32 @@ export function createApiRouter(deps: Dependencies): Router {
   });
 
   return router;
+}
+
+function toProductResponse(product: Product): ProductResponse {
+  return {
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    image_path: product.image_path,
+    price_cents: product.price_cents,
+  };
+}
+
+function toOrderResponse(order: Order): OrderResponse {
+  return {
+    id: order.id,
+    status: order.status,
+    total_cents: order.total_cents,
+    created_at: order.created_at,
+  };
+}
+
+function toOrderItemResponse(orderItem: OrderItem): OrderItemResponse {
+  return {
+    product_id: orderItem.id,
+    product_name: orderItem.product_name,
+    quantity: orderItem.quantity,
+    price_cents: orderItem.price_cents,
+  };
 }
