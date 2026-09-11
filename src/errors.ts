@@ -1,15 +1,14 @@
 import type { ErrorRequestHandler, Response } from "express";
 import multer from "multer";
-import { escapeHtml, renderPage } from "./views/layout.ts";
 import { logEvent } from "./logger.ts";
+import { escapeHtml, renderPage } from "./views/layout.ts";
 
 export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
   const details = error instanceof Error ? error : new Error(String(error));
 
   logEvent("unhandled_error", {
     method: req.method,
-    path:
-      typeof req.route?.path === "string" ? req.route.path : "unmatched route",
+    path: req.path,
     message: details.message,
     stack: details.stack,
   });
@@ -31,23 +30,12 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, next) => {
     return;
   }
 
-  res
-    .status(500)
-    .type("html")
-    .send(
-      renderPage(
-        "Application Error",
-        `<nav class="page-nav" aria-label="Primary"><a class="brand-link" href="/">Bearly Secure</a></nav>
-        <p class="eyebrow">Error 500</p>
-        <h1>Something went wrong</h1>
-        <p class="subtitle">The request failed, but here are the diagnostic details.</p>
-        <article class="card">
-          <h2>${escapeHtml(details.name)}</h2>
-          <p>${escapeHtml(details.message)}</p>
-          <pre>${escapeHtml(details.stack ?? "No stack trace available")}</pre>
-        </article>`,
-      ),
-    );
+  sendErrorPage(
+    res,
+    500,
+    "Something Went Wrong",
+    "The request failed. Try again, or return to the store.",
+  );
 };
 
 function isContentTooLarge(error: unknown): boolean {
