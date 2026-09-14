@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { openDatabase } from "./db/index.ts";
@@ -17,6 +16,15 @@ export type Dependencies = {
   db: DatabaseSync;
   pawPalApiKey: string;
 };
+
+function parseDownloadSigningKey(value: string): Buffer {
+  if (value.length !== 64 || /[^0-9a-f]/i.test(value)) {
+    throw new Error(
+      "DOWNLOAD_SIGNING_KEY must contain exactly 64 hexadecimal characters",
+    );
+  }
+  return Buffer.from(value, "hex");
+}
 
 function parseNonNegativeInteger(value: string, name: string): number {
   const parsed = Number(value);
@@ -51,7 +59,9 @@ export function initDependencies(
     maxRequestBodyBytes: 32 * 1024,
     maxUploadBytes: 1024 * 1024,
     maxPublicProductResults: 50,
-    downloadSigningKey: randomBytes(32),
+    downloadSigningKey: parseDownloadSigningKey(
+      requireEnv(env, "DOWNLOAD_SIGNING_KEY"),
+    ),
     keyring: loadOptionalKeyring(env),
     pawPalApiKey: requireEnv(env, "PAWPAL_API_KEY"),
   };
