@@ -6,6 +6,7 @@ import { loadOptionalKeyring, type Keyring } from "./storage/keyring.ts";
 export type Dependencies = {
   appOrigin: string;
   port: number;
+  trustedProxyHops: number;
   databasePath: string;
   acornFulfillmentDelayMs: number;
   maxRequestBodyBytes: number;
@@ -54,6 +55,10 @@ export function initDependencies(
   const values = {
     appOrigin: new URL(env.APP_ORIGIN ?? "http://localhost:3000").origin,
     port,
+    trustedProxyHops: parseNonNegativeInteger(
+      env.TRUST_PROXY_HOPS ?? "0",
+      "TRUST_PROXY_HOPS",
+    ),
     databasePath: env.DATABASE_URL ?? join(cwd, "data", "bearly-secure.sqlite"),
     acornFulfillmentDelayMs,
     maxRequestBodyBytes: 32 * 1024,
