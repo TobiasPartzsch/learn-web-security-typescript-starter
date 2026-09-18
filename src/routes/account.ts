@@ -159,7 +159,7 @@ export function createAccountRouter(deps: Dependencies): Router {
     res.redirect("/account");
   });
 
-  router.post("/account/email", (req, res) => {
+  router.post("/account/email", async (req, res) => {
     const current = requireAuth(db, req, res);
     if (!current) return;
 
@@ -173,7 +173,7 @@ export function createAccountRouter(deps: Dependencies): Router {
       return;
     }
     const currentPassword = String(req.body.currentPassword ?? "");
-    if (!currentPassword || !verifyPassword(currentPassword, current.user.password_hash)) {
+    if (!currentPassword || !await verifyPassword(currentPassword, current.user.password_hash)) {
       res
         .status(403)
         .type("html")
