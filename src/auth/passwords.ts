@@ -3,6 +3,12 @@ import { hash, timingSafeEqual } from "node:crypto";
 
 export const MAX_PASSWORD_LENGTH = 128;
 const LEGACY_SHA256_PATTERN = /^[a-f0-9]{64}$/i;
+const PASSWORD_HASH_OPTIONS = {
+  type: argon2.argon2id,
+  memoryCost: 19 * 1024,
+  timeCost: 2,
+  parallelism: 1,
+} as const;
 
 export async function hashPassword(password: string): Promise<string> {
   if (password.length > MAX_PASSWORD_LENGTH) {
@@ -36,5 +42,16 @@ export async function verifyPassword(
     return await argon2.verify(passwordHash, password);
   } catch {
     return false;
+  }
+}
+
+export function passwordNeedsRehash(passwordHash: string): boolean {
+  if (LEGACY_SHA256_PATTERN.test(passwordHash)) {
+    return true
+  }
+  try {
+    return argon2.needsRehash(passwordHash, PASSWORD_HASH_OPTIONS)
+  } catch (error) {
+    return true
   }
 }
