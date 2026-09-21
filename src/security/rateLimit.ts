@@ -1,4 +1,5 @@
 import type { Request, RequestHandler, Response } from "express";
+import { sendErrorPage } from "../errors.ts";
 
 export type RateLimitState = {
   limit: number;
@@ -24,6 +25,33 @@ type RateLimitResult = {
   limited: boolean;
   state: RateLimitState;
 };
+
+export const SECONDS_PER_MINUTE = 60;
+export const SECONDS_PER_HOUR = 60 * SECONDS_PER_MINUTE;
+
+export const AUTH_RATE_LIMIT_OPTIONS = {
+  loginBySource: {
+    windowSeconds: 15 * SECONDS_PER_MINUTE,
+    max: 20,
+    onLimit: rejectRateLimitedRequest,
+  },
+  loginByAccount: {
+    max: 5,
+    windowSeconds: 15 * SECONDS_PER_MINUTE,
+    onLimit: rejectRateLimitedRequest,
+  },
+  passwordResetBySource: {
+    max: 10,
+    windowSeconds: SECONDS_PER_HOUR,
+    onLimit: rejectRateLimitedRequest,
+  },
+  passwordResetByAccount: {
+    max: 3,
+    windowSeconds: SECONDS_PER_HOUR,
+    onLimit: rejectRateLimitedRequest,
+  },
+} satisfies Record<string, RateLimiterOptions>;
+
 
 export class FixedWindowRateLimiter {
   private readonly counters = new Map<string, Counter>();
@@ -148,4 +176,12 @@ export function canonicalEmailKey(req: Request): string {
   return String(req.body?.email ?? "")
     .trim()
     .toLowerCase();
+}
+
+export function rejectRateLimitedRequest(
+  _req: Request,
+  res: Response,
+  _state: RateLimitState,
+): void {
+  sendErrorPage(res, 429, "Too Many Requests", "Try again later.");
 }

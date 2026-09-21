@@ -42,9 +42,8 @@ import {
   updateUserPassword
 } from "../auth/users.ts";
 import type { Dependencies } from "../dependencies.ts";
-import { sendErrorPage } from "../errors.ts";
 import { logEvent } from "../logger.ts";
-import { canonicalEmailKey, createRateLimiter } from "../security/rateLimit.ts";
+import { AUTH_RATE_LIMIT_OPTIONS, createRateLimiter } from "../security/rateLimit.ts";
 import {
   renderLoginPage,
   renderMfaRecoveryPage,
@@ -79,28 +78,18 @@ export function createAuthRouter(deps: Dependencies): Router {
   const VERIFICATION_RESTART_MESSAGE =
     "That verification attempt is no longer valid. Log in again.";
 
-  const loginIpLimiter = createRateLimiter({
-    windowSeconds: 15 * 60,
-    max: 20,
-    onLimit: rejectAuthenticationAbuse,
-  });
-  const loginAccountLimiter = createRateLimiter({
-    windowSeconds: 15 * 60,
-    max: 5,
-    key: canonicalEmailKey,
-    onLimit: rejectAuthenticationAbuse,
-  });
-  const passwordResetIpLimiter = createRateLimiter({
-    windowSeconds: 60 * 60,
-    max: 10,
-    onLimit: rejectAuthenticationAbuse,
-  });
-  const passwordResetAccountLimiter = createRateLimiter({
-    windowSeconds: 60 * 60,
-    max: 3,
-    key: canonicalEmailKey,
-    onLimit: rejectAuthenticationAbuse,
-  });
+  const loginIpLimiter = createRateLimiter(
+    AUTH_RATE_LIMIT_OPTIONS.loginBySource
+  );
+  const loginAccountLimiter = createRateLimiter(
+    AUTH_RATE_LIMIT_OPTIONS.loginByAccount
+  );
+  const passwordResetIpLimiter = createRateLimiter(
+    AUTH_RATE_LIMIT_OPTIONS.passwordResetBySource
+  );
+  const passwordResetAccountLimiter = createRateLimiter(
+    AUTH_RATE_LIMIT_OPTIONS.passwordResetByAccount
+  );
 
   router.get("/login", (req, res) => {
     const returnTo = safeReturnTo(req.query.returnTo);
@@ -570,10 +559,6 @@ export function createAuthRouter(deps: Dependencies): Router {
 
   function renderTotpLoginPage(returnTo: string, error?: string): string {
     return renderTotpLoginView(safeReturnTo(returnTo), error);
-  }
-
-  function rejectAuthenticationAbuse(_req: Request, res: Response): void {
-    sendErrorPage(res, 429, "Too Many Requests", "Try again later.");
   }
 
   return router;
