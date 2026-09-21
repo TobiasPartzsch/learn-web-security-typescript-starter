@@ -21,6 +21,7 @@ import { createPawPalRouter } from "./routes/pawpal.ts";
 import { createProductsRouter } from "./routes/products.ts";
 import { createStorefrontRouter } from "./routes/storefront.ts";
 import { createSupportRouter } from "./routes/support.ts";
+import { createRateLimiter } from "./security/rateLimit.ts";
 import { migrateSensitiveDataAtRest } from "./storage/migrations.ts";
 
 
@@ -28,6 +29,11 @@ export function createApp(deps: Dependencies): express.Express {
   migrateSensitiveDataAtRest(deps.db, deps.keyring);
   const app = express();
   app.set("trust proxy", deps.trustedProxyHops);
+
+  const globalRateLimiter = createRateLimiter({
+    windowSeconds: deps.windowSeconds,
+    max: deps.maxRequestsPerWindow,
+  });
 
   app.use((_req, res, next) => {
     const cspNonce = randomBytes(16).toString("base64");
@@ -57,6 +63,7 @@ export function createApp(deps: Dependencies): express.Express {
   app.get("/health", (_req, res) => {
     res.json({ ok: true, app: "bearly-secure" });
   });
+  app.use(globalRateLimiter)
   app.use(
     ["/shipping-widget.css", "/shipping-widget.js"],
     (_req, res, next) => {

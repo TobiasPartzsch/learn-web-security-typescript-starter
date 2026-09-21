@@ -16,6 +16,8 @@ export type Dependencies = {
   keyring: Keyring;
   db: DatabaseSync;
   pawPalApiKey: string;
+  windowSeconds: number;
+  maxRequestsPerWindow: number
 };
 
 function parseDownloadSigningKey(value: string): Buffer {
@@ -69,6 +71,8 @@ export function initDependencies(
     ),
     keyring: loadKeyring(env),
     pawPalApiKey: requireEnv(env, "PAWPAL_API_KEY"),
+    windowSeconds: 60,
+    maxRequestsPerWindow: 100,
   };
 
   return { ...values, db: openDatabase(values.databasePath) };
