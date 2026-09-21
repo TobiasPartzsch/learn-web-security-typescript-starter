@@ -17,7 +17,8 @@ export type Dependencies = {
   db: DatabaseSync;
   pawPalApiKey: string;
   windowSeconds: number;
-  maxRequestsPerWindow: number
+  maxGlobalRequestsPerWindow: number;
+  maxProductsRequestsPerWindow: number
 };
 
 function parseDownloadSigningKey(value: string): Buffer {
@@ -72,7 +73,8 @@ export function initDependencies(
     keyring: loadKeyring(env),
     pawPalApiKey: requireEnv(env, "PAWPAL_API_KEY"),
     windowSeconds: 60,
-    maxRequestsPerWindow: 100,
+    maxGlobalRequestsPerWindow: 100,
+    maxProductsRequestsPerWindow: 30,
   };
 
   return { ...values, db: openDatabase(values.databasePath) };

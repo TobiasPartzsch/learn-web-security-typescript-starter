@@ -32,8 +32,12 @@ export function createApp(deps: Dependencies): express.Express {
 
   const globalRateLimiter = createRateLimiter({
     windowSeconds: deps.windowSeconds,
-    max: deps.maxRequestsPerWindow,
+    max: deps.maxGlobalRequestsPerWindow,
   });
+  const productApiRateLimiter = createRateLimiter({
+    windowSeconds: deps.windowSeconds,
+    max: deps.maxProductsRequestsPerWindow,
+  })
 
   app.use((_req, res, next) => {
     const cspNonce = randomBytes(16).toString("base64");
@@ -83,6 +87,7 @@ export function createApp(deps: Dependencies): express.Express {
   app.use(validateRequestOrigin(deps.appOrigin));
   app.use(
     "/api/products",
+    productApiRateLimiter,
     cors({
       origin: "*",
       credentials: false,
