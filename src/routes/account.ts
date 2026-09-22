@@ -48,7 +48,7 @@ import {
 export function createAccountRouter(deps: Dependencies): Router {
   const { db, keyring } = deps;
   const router = Router();
-  const uploadTaxDocument = createUploadMiddleware("document");
+  const uploadTaxDocument = createUploadMiddleware("document", deps.maxUploadBytes);
 
   router.get("/account", (req, res) => {
     const current = requireAuth(db, req, res);

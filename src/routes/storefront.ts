@@ -2,7 +2,7 @@ import { Router } from "express";
 import { getCurrentSession } from "../auth/sessions.ts";
 import { listCartItems } from "../cart.ts";
 import type { Dependencies } from "../dependencies.ts";
-import { listProducts, searchProducts } from "../products.ts";
+import { listPublicProducts, searchPublicProducts } from "../products.ts";
 import { AUTH_RATE_LIMIT_OPTIONS, createRateLimiter } from "../security/rateLimit.ts";
 import { renderSearchPage, renderStorefrontPage } from "../views/storefront.ts";
 
@@ -17,7 +17,7 @@ export function createStorefrontRouter(deps: Dependencies): Router {
 
   router.get("/", (req, res) => {
     const current = getCurrentSession(db, req.header("cookie"));
-    const products = listProducts(db);
+    const products = listPublicProducts(db, deps.maxPublicProductResults);
     const cartQuantities = current
       ? getCartQuantities(current.user.id)
       : new Map<number, number>();
@@ -33,7 +33,7 @@ export function createStorefrontRouter(deps: Dependencies): Router {
       ? getCartQuantities(current.user.id)
       : new Map<number, number>();
     const query = String(req.query.q ?? "").trim();
-    const products = query.length > 0 ? searchProducts(db, query) : [];
+    const products = query.length > 0 ? searchPublicProducts(db, query, deps.maxPublicProductResults) : [];
     res
       .type("html")
       .send(renderSearchPage(current, query, products, cartQuantities));

@@ -81,8 +81,8 @@ export function createApp(deps: Dependencies): express.Express {
     express.static("node_modules/@simplewebauthn/browser/dist/bundle"),
   );
 
-  app.use(express.urlencoded({ extended: false }));
-  app.use(express.json());
+  app.use(express.urlencoded({ extended: false, limit: deps.maxRequestBodyBytes }));
+  app.use(express.json({ limit: deps.maxRequestBodyBytes }));
   app.use(createPawPalRouter(deps));
   app.use(validateRequestOrigin(deps.appOrigin));
   app.use(

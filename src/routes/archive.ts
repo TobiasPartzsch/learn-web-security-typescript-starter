@@ -4,22 +4,22 @@ import {
   type Request,
   type Response,
 } from "express";
-import type { Dependencies } from "../dependencies.ts";
 import { requireAuth } from "../auth/accessControl.ts";
 import type { CurrentSession } from "../auth/sessions.ts";
+import type { Dependencies } from "../dependencies.ts";
 import { sendErrorPage } from "../errors.ts";
-import { renderArchivePage } from "../views/archive.ts";
 import {
   ArchiveImportError,
   extractTaxDocumentArchive,
 } from "../uploads/archive.ts";
 import { createImportedTaxDocuments } from "../uploads/importedTaxDocuments.ts";
 import { createUploadMiddleware } from "../uploads/middleware.ts";
+import { renderArchivePage } from "../views/archive.ts";
 
 export function createArchiveRouter(deps: Dependencies): Router {
   const { db } = deps;
   const router = Router();
-  const uploadTaxArchive = createUploadMiddleware("archive");
+  const uploadTaxArchive = createUploadMiddleware("archive", deps.maxUploadBytes);
 
   router.get("/support/tax-exemptions/import", requireSupport, (req, res) => {
     const current = res.locals.currentSession as CurrentSession;
