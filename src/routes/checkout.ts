@@ -8,7 +8,7 @@ import {
 import { csrfTokensMatch } from "../csrf.ts";
 import type { Dependencies } from "../dependencies.ts";
 import { sendErrorPage } from "../errors.ts";
-import { reserveAcornFulfillment } from "../integrations/acornFulfillment.ts";
+import { isAcornFulfillmentTimeout, reserveAcornFulfillmentWithTimeout } from "../integrations/acornFulfillment.ts";
 import {
   createPawPalCheckoutUrl,
   createPawPalReference,
@@ -148,10 +148,23 @@ export function createCheckoutRouter(deps: Dependencies): Router {
       region: shippingRegion,
       postalCode: shippingPostalCode,
     };
-    await reserveAcornFulfillment(shippingDetails, {
-      delayMs: deps.acornFulfillmentDelayMs,
-    });
-
+    try {
+      await reserveAcornFulfillmentWithTimeout(shippingDetails, {
+        delayMs: deps.acornFulfillmentDelayMs,
+        // timeoutMs: deps.acornFulfillmentDelayMs,
+      });
+    } catch (error) {
+      if (isAcornFulfillmentTimeout(error)) {
+        sendFulfillmentTimeout(
+          res,
+          items,
+          current.session.csrf_token,
+          current.user.display_name,
+        );
+        return;
+      }
+      throw error;
+    }
     items = listCartItems(db, current.user.id);
     if (items.length === 0) {
       res.redirect("/cart");
