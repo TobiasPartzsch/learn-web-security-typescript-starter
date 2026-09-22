@@ -1,13 +1,19 @@
 import { Router } from "express";
-import type { Dependencies } from "../dependencies.ts";
 import { getCurrentSession } from "../auth/sessions.ts";
 import { listCartItems } from "../cart.ts";
+import type { Dependencies } from "../dependencies.ts";
 import { listProducts, searchProducts } from "../products.ts";
+import { AUTH_RATE_LIMIT_OPTIONS, createRateLimiter } from "../security/rateLimit.ts";
 import { renderSearchPage, renderStorefrontPage } from "../views/storefront.ts";
 
 export function createStorefrontRouter(deps: Dependencies): Router {
   const { db } = deps;
   const router = Router();
+
+  const searchThrottle = createRateLimiter(
+    AUTH_RATE_LIMIT_OPTIONS.searchProductsThrottle
+  );
+
 
   router.get("/", (req, res) => {
     const current = getCurrentSession(db, req.header("cookie"));
@@ -21,7 +27,7 @@ export function createStorefrontRouter(deps: Dependencies): Router {
       .send(renderStorefrontPage(current, products, cartQuantities));
   });
 
-  router.get("/search", (req, res) => {
+  router.get("/search", searchThrottle, (req, res) => {
     const current = getCurrentSession(db, req.header("cookie"));
     const cartQuantities = current
       ? getCartQuantities(current.user.id)

@@ -36,20 +36,26 @@ export const AUTH_RATE_LIMIT_OPTIONS = {
     onLimit: rejectRateLimitedRequest,
   },
   loginByAccount: {
-    max: 5,
     windowSeconds: 15 * SECONDS_PER_MINUTE,
+    max: 5,
     onLimit: rejectRateLimitedRequest,
   },
   passwordResetBySource: {
-    max: 10,
     windowSeconds: SECONDS_PER_HOUR,
+    max: 10,
     onLimit: rejectRateLimitedRequest,
   },
   passwordResetByAccount: {
-    max: 3,
     windowSeconds: SECONDS_PER_HOUR,
+    max: 3,
     onLimit: rejectRateLimitedRequest,
   },
+  searchProductsThrottle: {
+    windowSeconds: 1,
+    max: 5,
+    onLimit: rejectThrottledSearch,
+    key: (_req) => "product-search",
+  }
 } satisfies Record<string, RateLimiterOptions>;
 
 
@@ -184,4 +190,12 @@ export function rejectRateLimitedRequest(
   _state: RateLimitState,
 ): void {
   sendErrorPage(res, 429, "Too Many Requests", "Try again later.");
+}
+
+export function rejectThrottledSearch(
+  _req: Request,
+  res: Response,
+  _state: RateLimitState,
+): void {
+  sendErrorPage(res, 429, "Search Is Busy", "Try again later.");
 }
