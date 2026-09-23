@@ -43,6 +43,7 @@ import {
 } from "../auth/users.ts";
 import type { Dependencies } from "../dependencies.ts";
 import { logEvent } from "../logger.ts";
+import { protectSignupFromBots } from "../security/botRisk.ts";
 import { AUTH_RATE_LIMIT_OPTIONS, createRateLimiter } from "../security/rateLimit.ts";
 import {
   renderLoginPage,
@@ -343,7 +344,7 @@ export function createAuthRouter(deps: Dependencies): Router {
     res.redirect(challenge.return_to);
   });
 
-  router.post("/signup", async (req, res) => {
+  router.post("/signup", protectSignupFromBots, async (req, res) => {
     if (getCurrentSession(db, req.header("cookie"))) {
       res.redirect("/account");
       return;
