@@ -1,5 +1,6 @@
 import { type Request, type Response, Router } from "express";
 import { findApiKey } from "../auth/apiKeys.ts";
+import { consumeApiKeyQuota } from "../auth/apiKeyUsage.ts";
 import { getCurrentSession } from "../auth/sessions.ts";
 import type { Dependencies } from "../dependencies.ts";
 import {
@@ -11,6 +12,9 @@ import {
   type OrderItem,
 } from "../orders/index.ts";
 import { listPublicProducts, type Product } from "../products.ts";
+
+import { type ApiKeyQuotaResponse, sendApiKeyQuotaExhausted, setApiKeyQuotaHeaders, toApiKeyQuotaResponse } from "./apiKeyQuota.ts";
+
 
 type ProductResponse = {
   id: number;
@@ -37,6 +41,7 @@ type OrderItemResponse = {
 type WarehouseOrdersResponse = {
   integration: string;
   orders: OrderResponse[];
+  quota: ApiKeyQuotaResponse;
 };
 
 type ProductsListResponse = { products: ProductResponse[] };
@@ -104,11 +109,19 @@ export function createApiRouter(deps: Dependencies): Router {
       return;
     }
 
+    const quota = consumeApiKeyQuota(db, apiKey.id)
+    if (!quota.allowed) {
+      sendApiKeyQuotaExhausted(res, quota);
+      return;
+    }
+    setApiKeyQuotaHeaders(res, quota)
+
     const orders = listAllOrders(db).map(toOrderResponse);
 
     res.json({
       integration: "Warehouse Fulfillment Integration",
       orders,
+      quota: toApiKeyQuotaResponse(quota),
     });
   });
 

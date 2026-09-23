@@ -1,12 +1,14 @@
 import type { Response } from "express";
 import type { ApiKeyQuota } from "../auth/apiKeyUsage.ts";
 
-export function toApiKeyQuotaResponse(quota: ApiKeyQuota): {
+export type ApiKeyQuotaResponse = {
   used: number;
   limit: number;
   remaining: number;
   resets_at: string;
-} {
+};
+
+export function toApiKeyQuotaResponse(quota: ApiKeyQuota): ApiKeyQuotaResponse {
   return {
     used: quota.used,
     limit: quota.limit,
