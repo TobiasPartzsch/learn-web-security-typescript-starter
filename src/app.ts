@@ -21,6 +21,7 @@ import { createPawPalRouter } from "./routes/pawpal.ts";
 import { createProductsRouter } from "./routes/products.ts";
 import { createStorefrontRouter } from "./routes/storefront.ts";
 import { createSupportRouter } from "./routes/support.ts";
+import { createLoadShedder } from "./security/loadShedding.ts";
 import { createRateLimiter } from "./security/rateLimit.ts";
 import { migrateSensitiveDataAtRest } from "./storage/migrations.ts";
 
@@ -37,6 +38,10 @@ export function createApp(deps: Dependencies): express.Express {
   const productApiRateLimiter = createRateLimiter({
     windowSeconds: deps.windowSeconds,
     max: deps.maxProductsRequestsPerWindow,
+  })
+  const globalLoadShedder = createLoadShedder({
+    maxConcurrent: 50,
+    retryAfterSeconds: 1,
   })
 
   app.use((_req, res, next) => {
@@ -67,7 +72,10 @@ export function createApp(deps: Dependencies): express.Express {
   app.get("/health", (_req, res) => {
     res.json({ ok: true, app: "bearly-secure" });
   });
-  app.use(globalRateLimiter)
+
+  app.use(globalLoadShedder);
+  app.use(globalRateLimiter);
+
   app.use(
     ["/shipping-widget.css", "/shipping-widget.js"],
     (_req, res, next) => {
