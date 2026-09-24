@@ -127,3 +127,12 @@ export function revokeSession(db: DatabaseSync, token: string): void {
       WHERE token_hash = ?
     `).run(new Date().toISOString(), fastHash(token));
 }
+
+export function revokeAllActiveSessions(db: DatabaseSync): number {
+  const result = db.prepare(`
+      UPDATE sessions
+      SET revoked_at = CURRENT_TIMESTAMP
+      WHERE revoked_at IS NULL
+    `).run()
+  return Number(result.changes);
+}
