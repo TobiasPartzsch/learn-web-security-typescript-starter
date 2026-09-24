@@ -1,5 +1,6 @@
 import type { Request, RequestHandler, Response } from "express";
 import { sendErrorPage } from "../errors.ts";
+import { MS_PER_SECOND, SECONDS_PER_HOUR, SECONDS_PER_MINUTE } from "../time.ts";
 
 export type RateLimitState = {
   limit: number;
@@ -25,9 +26,6 @@ type RateLimitResult = {
   limited: boolean;
   state: RateLimitState;
 };
-
-export const SECONDS_PER_MINUTE = 60;
-export const SECONDS_PER_HOUR = 60 * SECONDS_PER_MINUTE;
 
 export const AUTH_RATE_LIMIT_OPTIONS = {
   loginBySource: {
@@ -76,7 +74,7 @@ export class FixedWindowRateLimiter {
     this.onLimit = options.onLimit;
     this.readKey = options.key ?? clientIpKey;
     this.readNow = options.now ?? Date.now;
-    this.windowMs = options.windowSeconds * 1_000;
+    this.windowMs = options.windowSeconds * MS_PER_SECOND;
     this.nextSweepAt = this.readNow() + this.windowMs;
   }
 
@@ -93,7 +91,7 @@ export class FixedWindowRateLimiter {
 
     const retryAfterSeconds = Math.max(
       1,
-      Math.ceil((counter.resetAt - now) / 1000),
+      Math.ceil((counter.resetAt - now) / MS_PER_SECOND),
     );
     if (counter.count >= this.max) {
       return {
@@ -122,7 +120,7 @@ export class FixedWindowRateLimiter {
   public setHeaders(res: Response, state: RateLimitState): void {
     res.setHeader("RateLimit-Limit", String(state.limit));
     res.setHeader("RateLimit-Remaining", String(state.remaining));
-    res.setHeader("RateLimit-Reset", String(Math.ceil(state.resetAt / 1000)));
+    res.setHeader("RateLimit-Reset", String(Math.ceil(state.resetAt / MS_PER_SECOND)));
   }
 
   public reject(req: Request, res: Response, state: RateLimitState): void {
