@@ -25,7 +25,9 @@ import { createSupportRouter } from "./routes/support.ts";
 import { createLoadShedder } from "./security/loadShedding.ts";
 import { createRateLimiter } from "./security/rateLimit.ts";
 import { migrateSensitiveDataAtRest } from "./storage/migrations.ts";
+import { MS_PER_DAY } from "./time.ts";
 
+const DAYS_UNTIL_EXPIRY = 180;
 
 export function createApp(deps: Dependencies): express.Express {
   migrateSensitiveDataAtRest(deps.db, deps.keyring);
@@ -74,6 +76,14 @@ export function createApp(deps: Dependencies): express.Express {
 
   app.get("/health", (_req, res) => {
     res.json({ ok: true, app: "bearly-secure" });
+  });
+
+  app.get("/.well-known/security.txt", (_req, res) => {
+    const expiration = new Date(Date.now() + DAYS_UNTIL_EXPIRY * MS_PER_DAY);
+    const body = `Contact: mailto:security@bearlysecure.example
+Policy: https://bearlysecure.example/security-policy
+Expires: ${expiration.toISOString()}`;
+    res.type("text/plain").send(body)
   });
 
   app.use(globalLoadShedder);
