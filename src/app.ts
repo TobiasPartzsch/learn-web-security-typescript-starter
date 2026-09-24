@@ -5,6 +5,7 @@ import { randomBytes } from "node:crypto";
 import { validateRequestOrigin } from "./csrf.ts";
 import type { Dependencies } from "./dependencies.ts";
 import { errorHandler, sendErrorPage } from "./errors.ts";
+import { assignRequestId } from "./observability/requestId.ts";
 import { createAccountRouter } from "./routes/account.ts";
 import { createAdminRouter } from "./routes/admin.ts";
 import { createApiRouter } from "./routes/api.ts";
@@ -29,7 +30,9 @@ import { migrateSensitiveDataAtRest } from "./storage/migrations.ts";
 export function createApp(deps: Dependencies): express.Express {
   migrateSensitiveDataAtRest(deps.db, deps.keyring);
   const app = express();
+
   app.set("trust proxy", deps.trustedProxyHops);
+  app.use(assignRequestId);
 
   const globalRateLimiter = createRateLimiter({
     windowSeconds: deps.windowSeconds,

@@ -44,7 +44,7 @@ import {
 import type { Dependencies } from "../dependencies.ts";
 import { logEvent } from "../logger.ts";
 import { protectSignupFromBots } from "../security/botRisk.ts";
-import { AUTH_RATE_LIMIT_OPTIONS, createRateLimiter } from "../security/rateLimit.ts";
+import { AUTH_RATE_LIMIT_OPTIONS, clientIpKey, createRateLimiter } from "../security/rateLimit.ts";
 import {
   renderLoginPage,
   renderMfaRecoveryPage,
@@ -63,12 +63,18 @@ type AuthenticationLogFields = {
 };
 
 function logAuthenticationEvent(
-  _req: Request,
-  _res: Response,
+  req: Request,
+  res: Response,
   eventName: "login_attempt" | "password_reset_request",
   fields: AuthenticationLogFields,
 ): void {
-  logEvent(eventName, fields);
+  logEvent(eventName, {
+    ...fields,
+    requestId: res.locals.requestId,
+    sourceIp: clientIpKey(req),
+    userId: fields.userId ?? null,
+    outcome: fields.success ? "success" : "failure",
+  });
 }
 
 export function createAuthRouter(deps: Dependencies): Router {
