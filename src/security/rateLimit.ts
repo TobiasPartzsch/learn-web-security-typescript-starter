@@ -38,6 +38,7 @@ export const AUTH_RATE_LIMIT_OPTIONS = {
   loginByAccount: {
     windowSeconds: 15 * SECONDS_PER_MINUTE,
     max: 5,
+    key: canonicalEmailKey,
     onLimit: rejectRateLimitedRequest,
   },
   passwordResetBySource: {
@@ -48,6 +49,7 @@ export const AUTH_RATE_LIMIT_OPTIONS = {
   passwordResetByAccount: {
     windowSeconds: SECONDS_PER_HOUR,
     max: 3,
+    key: canonicalEmailKey,
     onLimit: rejectRateLimitedRequest,
   },
   searchProductsThrottle: {

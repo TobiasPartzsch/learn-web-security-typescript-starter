@@ -43,6 +43,7 @@ import {
 } from "../auth/users.ts";
 import type { Dependencies } from "../dependencies.ts";
 import { logEvent } from "../logger.ts";
+import { createAuthAlertThreshold } from "../observability/authAlerts.ts";
 import { protectSignupFromBots } from "../security/botRisk.ts";
 import { AUTH_RATE_LIMIT_OPTIONS, clientIpKey, createRateLimiter } from "../security/rateLimit.ts";
 import {
@@ -97,6 +98,17 @@ export function createAuthRouter(deps: Dependencies): Router {
   const passwordResetAccountLimiter = createRateLimiter(
     AUTH_RATE_LIMIT_OPTIONS.passwordResetByAccount
   );
+
+  const recordFailedLogin = createAuthAlertThreshold({
+    signal: "failed_logins",
+    threshold: 3,
+    windowSeconds: 5 * 60,
+  })
+  const recordPasswordResetRequest = createAuthAlertThreshold({
+    signal: "password_reset_requests",
+    threshold: 3,
+    windowSeconds: 10 * 60,
+  })
 
   router.get("/login", (req, res) => {
     const returnTo = safeReturnTo(req.query.returnTo);
@@ -232,10 +244,12 @@ export function createAuthRouter(deps: Dependencies): Router {
           failureReason: !user ? "email not found" : "password mismatch",
           returnTo,
         });
+        recordFailedLogin(req, res.locals.requestId, user?.id ?? null,)
         res
           .status(401)
           .type("html")
           .send(renderLoginPage("Invalid email or password", returnTo));
+
         return;
       }
 
@@ -315,6 +329,7 @@ export function createAuthRouter(deps: Dependencies): Router {
         failureReason: "totp code mismatch",
         returnTo: challenge.return_to,
       });
+      recordFailedLogin(req, res.locals.requestId, user.id,)
       if (challengeExhausted) {
         clearTotpLoginChallengeCookie(res);
         res.redirect(verificationRestartLoginPath(challenge.return_to));
@@ -344,6 +359,7 @@ export function createAuthRouter(deps: Dependencies): Router {
       sessionId: session.token,
       returnTo: challenge.return_to,
     });
+    recordFailedLogin(req, res.locals.requestId, user.id,)
 
     setSessionCookie(res, session);
     clearTotpLoginChallengeCookie(res);
@@ -446,6 +462,7 @@ export function createAuthRouter(deps: Dependencies): Router {
           success: false,
           failureReason: "email not found",
         });
+        recordPasswordResetRequest(req, res.locals.requestId, null,)
         res.type("html").send(renderPasswordResetRequestConfirmationPage());
         return;
       }
@@ -465,6 +482,7 @@ export function createAuthRouter(deps: Dependencies): Router {
         resetToken: token,
         resetLink,
       });
+      recordPasswordResetRequest(req, res.locals.requestId, user?.id ?? null,)
       res.type("html").send(renderPasswordResetRequestConfirmationPage());
     },
   );
